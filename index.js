@@ -7,7 +7,7 @@ const {
   ButtonStyle,
   REST,
   Routes,
-  SlashCommandBuilder
+  SlashCommandBuilder 
 } = require("discord.js");
 
 const fs = require("fs");
