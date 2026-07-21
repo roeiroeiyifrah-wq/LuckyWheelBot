@@ -222,6 +222,3 @@ client.on("interactionCreate", async interaction => {
 
 });\
 client.login(TOKEN);
-
-
-client.login(TOKEN);
