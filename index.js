@@ -221,4 +221,5 @@ client.on("interactionCreate", async interaction => {
   }
 
 });\
+console.log("בדיקה חדשה 123");
 client.login(TOKEN);
