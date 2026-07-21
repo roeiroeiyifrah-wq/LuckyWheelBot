@@ -24,8 +24,6 @@ const GUILD_ID = process.env.GUILD_ID;
 const COST = 1000;
 
 const WHEEL_CHANNEL_ID = "1529065973401915492";
-(node:25) DeprecationWarning: The ready event has been renamed to clientReady to distinguish it from the gateway READY event and will only emit under that name in v15. Please use clientReady instead.
-(Use `node --trace-deprecation ...` to show where the warning was created)
 const COMMAND_CHANNEL = "פקודות-גלגל";
 const STAFF_ROLE = "צוות";
 
@@ -80,148 +78,147 @@ client.once("ready", async () => {
     ),
     { body: commands }
   );
+
   const channel = client.channels.cache.get(
     WHEEL_CHANNEL_ID
   );
 
-  if (channel) {
-    const button = new ButtonBuilder()
-      .setCustomId("spin")
-      .setLabel("🎡 סובב גלגל")
-      .setStyle(ButtonStyle.Primary);
-
-    const row = new ActionRowBuilder()
-      .addComponents(button);
-
-    const embed = new EmbedBuilder()
-      .setTitle("🎡 גלגל המזל")
-      .setDescription(
-        "לחץ על הכפתור כדי לסובב!\nעלות סיבוב: 1000 נקודות"
-      );
-
-    await channel.send({
-      embeds: [embed],
-      components: [row]
-    });
+  if (!channel) {
+    console.log("לא נמצא חדר גלגל");
+    return;
   }
+
+  console.log("נמצא חדר:", channel.name);
+  const button = new ButtonBuilder()
+    .setCustomId("spin")
+    .setLabel("🎡 סובב גלגל")
+    .setStyle(ButtonStyle.Primary);
+
+  const row = new ActionRowBuilder()
+    .addComponents(button);
+
+  const embed = new EmbedBuilder()
+    .setTitle("🎡 גלגל המזל")
+    .setDescription(
+      "לחץ על הכפתור כדי לסובב!\nעלות סיבוב: 1000 נקודות"
+    );
+
+  await channel.send({
+    embeds: [embed],
+    components: [row]
+  });
+
 });
 
 
 client.on("interactionCreate", async interaction => {
 
-  if (!interaction.isChatInputCommand()) return;
+  if (interaction.isChatInputCommand()) {
+
+    if (interaction.commandName === "balance") {
+
+      const amount = points[interaction.user.id] || 0;
+
+      return interaction.reply({
+        content: `💎 יש לך ${amount} נקודות`,
+        ephemeral: true
+      });
+
+    }
 
 
-  if (interaction.commandName === "balance") {
+    if (interaction.commandName === "addpoints") {
 
-    const amount = points[interaction.user.id] || 0;
+      if (
+        !interaction.member.roles.cache
+        .some(role => role.name === STAFF_ROLE)
+      ) {
+        return interaction.reply({
+          content: "❌ אין לך הרשאה",
+          ephemeral: true
+        });
+      }
 
-    return interaction.reply({
-      content: `💎 יש לך ${amount} נקודות`,
-      ephemeral: true
-    });
+
+      if (interaction.channel.name !== COMMAND_CHANNEL) {
+        return interaction.reply({
+          content:
+          `❌ הפקודה עובדת רק בחדר ${COMMAND_CHANNEL}`,
+          ephemeral: true
+        });
+      }
+
+
+      const user =
+        interaction.options.getUser("user");
+
+      const amount =
+        interaction.options.getInteger("amount");
+
+
+      points[user.id] =
+        (points[user.id] || 0) + amount;
+
+
+      save();
+
+
+      return interaction.reply(
+        `✅ נוספו ${amount} נקודות ל-${user}`
+      );
+    }
+
   }
+  if (interaction.isButton()) {
+
+    if (interaction.customId !== "spin") return;
 
 
-  if (interaction.commandName === "addpoints") {
+    const user = interaction.user;
 
-    if (
-      !interaction.member.roles.cache
-      .some(role => role.name === STAFF_ROLE)
-    ) {
+    const currentPoints = points[user.id] || 0;
+
+
+    if (currentPoints < COST) {
       return interaction.reply({
-        content: "❌ אין לך הרשאה",
+        content: "❌ אין לך מספיק נקודות לסיבוב",
         ephemeral: true
       });
     }
 
 
-    if (interaction.channel.name !== COMMAND_CHANNEL) {
-      return interaction.reply({
-        content:
-        `❌ הפקודה עובדת רק בחדר ${COMMAND_CHANNEL}`,
-        ephemeral: true
-      });
-    }
+    points[user.id] -= COST;
 
 
-    const user =
-      interaction.options.getUser("user");
+    const prizes = [
+      { text: "💎 זכית ב־500 נקודות", add: 500 },
+      { text: "🔥 זכית ב־2000 נקודות", add: 2000 },
+      { text: "🎁 זכית בפרס מיוחד", add: 0 },
+      { text: "😭 לא זכית הפעם", add: 0 }
+    ];
 
-    const amount =
-      interaction.options.getInteger("amount");
+
+    const prize =
+      prizes[Math.floor(Math.random() * prizes.length)];
 
 
-    points[user.id] =
-      (points[user.id] || 0) + amount;
-
+    points[user.id] += prize.add;
 
     save();
 
 
-    return interaction.reply(
-      `✅ נוספו ${amount} נקודות ל-${user}`
-    );
-  }
-
-});
-client.on("interactionCreate", async interaction => {
-
-  if (!interaction.isButton()) return;
-
-  if (interaction.customId !== "spin") return;
+    const embed = new EmbedBuilder()
+      .setTitle("🎡 תוצאת הגלגל")
+      .setDescription(
+        `${user} סובב את הגלגל וקיבל:\n\n${prize.text}`
+      );
 
 
-  const user = interaction.user;
-
-  const currentPoints = points[user.id] || 0;
-
-
-  if (currentPoints < COST) {
     return interaction.reply({
-      content: "❌ אין לך מספיק נקודות לסיבוב",
-      ephemeral: true
+      embeds: [embed]
     });
+
   }
-
-
-  points[user.id] -= COST;
-
-
-  const prizes = [
-    "💎 זכית ב־500 נקודות",
-    "🔥 זכית ב־2000 נקודות",
-    "🎁 זכית בפרס מיוחד",
-    "😭 לא זכית הפעם"
-  ];
-
-
-  const prize =
-    prizes[Math.floor(Math.random() * prizes.length)];
-
-
-  if (prize.includes("500")) {
-    points[user.id] += 500;
-  }
-
-  if (prize.includes("2000")) {
-    points[user.id] += 2000;
-  }
-
-
-  save();
-
-
-  const embed = new EmbedBuilder()
-    .setTitle("🎡 תוצאת הגלגל")
-    .setDescription(
-      `${user} סובב את הגלגל וקיבל:\n\n${prize}`
-    );
-
-
-  return interaction.reply({
-    embeds: [embed]
-  });
 
 });
 
