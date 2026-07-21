@@ -23,14 +23,16 @@ const GUILD_ID = process.env.GUILD_ID;
 
 const COST = 1000;
 
-const WHEEL_CHANNEL = "גלגל-מזל";
+const WHEEL_CHANNEL_ID = "1529065973401915492";
 const COMMAND_CHANNEL = "פקודות-גלגל";
 const STAFF_ROLE = "צוות";
 
 let points = {};
 
 if (fs.existsSync("points.json")) {
-  points = JSON.parse(fs.readFileSync("points.json"));
+  points = JSON.parse(
+    fs.readFileSync("points.json")
+  );
 }
 
 function save() {
@@ -76,11 +78,9 @@ client.once("ready", async () => {
     ),
     { body: commands }
   );
-  const channel = client.guilds.cache
-    .get(GUILD_ID)
-    ?.channels.cache.find(
-      c => c.name === WHEEL_CHANNEL
-    );
+  const channel = client.channels.cache.get(
+    WHEEL_CHANNEL_ID
+  );
 
   if (channel) {
     const button = new ButtonBuilder()
@@ -109,6 +109,7 @@ client.on("interactionCreate", async interaction => {
 
   if (!interaction.isChatInputCommand()) return;
 
+
   if (interaction.commandName === "balance") {
 
     const amount = points[interaction.user.id] || 0;
@@ -117,7 +118,6 @@ client.on("interactionCreate", async interaction => {
       content: `💎 יש לך ${amount} נקודות`,
       ephemeral: true
     });
-
   }
 
 
@@ -133,9 +133,8 @@ client.on("interactionCreate", async interaction => {
       });
     }
 
-    if (
-      interaction.channel.name !== COMMAND_CHANNEL
-    ) {
+
+    if (interaction.channel.name !== COMMAND_CHANNEL) {
       return interaction.reply({
         content:
         `❌ הפקודה עובדת רק בחדר ${COMMAND_CHANNEL}`,
@@ -143,21 +142,26 @@ client.on("interactionCreate", async interaction => {
       });
     }
 
+
     const user =
       interaction.options.getUser("user");
 
     const amount =
       interaction.options.getInteger("amount");
 
+
     points[user.id] =
       (points[user.id] || 0) + amount;
 
+
     save();
+
 
     return interaction.reply(
       `✅ נוספו ${amount} נקודות ל-${user}`
     );
   }
+
 });
 client.on("interactionCreate", async interaction => {
 
@@ -165,18 +169,22 @@ client.on("interactionCreate", async interaction => {
 
   if (interaction.customId !== "spin") return;
 
+
   const user = interaction.user;
 
   const currentPoints = points[user.id] || 0;
 
+
   if (currentPoints < COST) {
     return interaction.reply({
-      content: "❌ אין לך מספיק נקודות בשביל לסובב",
+      content: "❌ אין לך מספיק נקודות לסיבוב",
       ephemeral: true
     });
   }
 
+
   points[user.id] -= COST;
+
 
   const prizes = [
     "💎 זכית ב־500 נקודות",
@@ -184,6 +192,7 @@ client.on("interactionCreate", async interaction => {
     "🎁 זכית בפרס מיוחד",
     "😭 לא זכית הפעם"
   ];
+
 
   const prize =
     prizes[Math.floor(Math.random() * prizes.length)];
@@ -197,13 +206,16 @@ client.on("interactionCreate", async interaction => {
     points[user.id] += 2000;
   }
 
+
   save();
+
 
   const embed = new EmbedBuilder()
     .setTitle("🎡 תוצאת הגלגל")
     .setDescription(
       `${user} סובב את הגלגל וקיבל:\n\n${prize}`
     );
+
 
   return interaction.reply({
     embeds: [embed]
