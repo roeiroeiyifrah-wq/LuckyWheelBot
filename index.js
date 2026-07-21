@@ -1,3 +1,4 @@
+console.log("קוד חדש עובד");
 const {
   Client,
   GatewayIntentBits,
