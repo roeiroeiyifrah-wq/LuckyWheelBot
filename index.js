@@ -24,6 +24,8 @@ const GUILD_ID = process.env.GUILD_ID;
 const COST = 1000;
 
 const WHEEL_CHANNEL_ID = "1529065973401915492";
+(node:25) DeprecationWarning: The ready event has been renamed to clientReady to distinguish it from the gateway READY event and will only emit under that name in v15. Please use clientReady instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
 const COMMAND_CHANNEL = "פקודות-גלגל";
 const STAFF_ROLE = "צוות";
 
