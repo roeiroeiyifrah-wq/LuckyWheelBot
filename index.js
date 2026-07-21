@@ -1,5 +1,3 @@
-console.log("🔥 הגרסה החדשה של Lucky Wheel עובדת 🔥");
-console.log("קוד חדש עובד");
 const {
   Client,
   GatewayIntentBits,
@@ -9,7 +7,7 @@ const {
   ButtonStyle,
   REST,
   Routes,
-  SlashCommandBuilder 
+  SlashCommandBuilder
 } = require("discord.js");
 
 const fs = require("fs");
@@ -23,11 +21,8 @@ const client = new Client({
 const TOKEN = process.env.TOKEN;
 const GUILD_ID = process.env.GUILD_ID;
 
-const COST = 1000;
-
 const WHEEL_CHANNEL_ID = "1529065973401915492";
-const COMMAND_CHANNEL = "פקודות-גלגל";
-const STAFF_ROLE = "צוות";
+const COST = 1000;
 
 let points = {};
 
@@ -44,26 +39,15 @@ function save() {
   );
 }
 
+
 const commands = [
   new SlashCommandBuilder()
-    .setName("balance")
-    .setDescription("בדיקת נקודות"),
+    .setName("wheel")
+    .setDescription("יצירת גלגל המזל"),
 
   new SlashCommandBuilder()
-    .setName("addpoints")
-    .setDescription("הוספת נקודות")
-    .addUserOption(option =>
-      option
-        .setName("user")
-        .setDescription("משתמש")
-        .setRequired(true)
-    )
-    .addIntegerOption(option =>
-      option
-        .setName("amount")
-        .setDescription("כמות נקודות")
-        .setRequired(true)
-    )
+    .setName("balance")
+    .setDescription("בדיקת נקודות")
 ].map(command => command.toJSON());
 
 
@@ -78,150 +62,117 @@ client.once("ready", async () => {
       client.user.id,
       GUILD_ID
     ),
-    { body: commands }
+    {
+      body: commands
+    }
   );
 
-  const channel = client.channels.cache.get(
-    WHEEL_CHANNEL_ID
-  );
+});
+client.on("interactionCreate", async interaction => {
 
-  if (!channel) {
-    console.log("לא נמצא חדר גלגל");
-    return;
+  if (!interaction.isChatInputCommand()) return;
+
+
+  if (interaction.commandName === "wheel") {
+
+    if (interaction.channel.id !== WHEEL_CHANNEL_ID) {
+      return interaction.reply({
+        content: "❌ הפקודה עובדת רק בחדר הגלגל",
+        ephemeral: true
+      });
+    }
+
+
+    const button = new ButtonBuilder()
+      .setCustomId("spin")
+      .setLabel("🎡 סובב גלגל")
+      .setStyle(ButtonStyle.Primary);
+
+
+    const row = new ActionRowBuilder()
+      .addComponents(button);
+
+
+    const embed = new EmbedBuilder()
+      .setTitle("🎡 Lucky Wheel")
+      .setDescription(
+        "לחץ על הכפתור כדי לסובב!\n💎 מחיר: 1000 נקודות"
+      );
+
+
+    await interaction.reply({
+      embeds: [embed],
+      components: [row]
+    });
+
   }
 
-  console.log("נמצא חדר:", channel.name);
-  const button = new ButtonBuilder()
-    .setCustomId("spin")
-    .setLabel("🎡 סובב גלגל")
-    .setStyle(ButtonStyle.Primary);
 
-  const row = new ActionRowBuilder()
-    .addComponents(button);
+  if (interaction.commandName === "balance") {
+
+    const amount = points[interaction.user.id] || 0;
+
+
+    await interaction.reply({
+      content: `💎 יש לך ${amount} נקודות`,
+      ephemeral: true
+    });
+
+  }
+
+});
+client.on("interactionCreate", async interaction => {
+
+  if (!interaction.isButton()) return;
+
+  if (interaction.customId !== "spin") return;
+
+
+  const user = interaction.user;
+
+  const userPoints = points[user.id] || 0;
+
+
+  if (userPoints < COST) {
+    return interaction.reply({
+      content: "❌ אין לך מספיק נקודות",
+      ephemeral: true
+    });
+  }
+
+
+  points[user.id] -= COST;
+
+
+  const prizes = [
+    { text: "💎 זכית ב־500 נקודות", amount: 500 },
+    { text: "🔥 זכית ב־2000 נקודות", amount: 2000 },
+    { text: "🎁 זכית בפרס מיוחד", amount: 0 },
+    { text: "😭 לא זכית הפעם", amount: 0 }
+  ];
+
+
+  const prize =
+    prizes[Math.floor(Math.random() * prizes.length)];
+
+
+  points[user.id] += prize.amount;
+
+  save();
+
 
   const embed = new EmbedBuilder()
-    .setTitle("🎡 גלגל המזל")
+    .setTitle("🎡 תוצאת הגלגל")
     .setDescription(
-      "לחץ על הכפתור כדי לסובב!\nעלות סיבוב: 1000 נקודות"
+      `${user} סובב את הגלגל!\n\n${prize.text}`
     );
 
-  await channel.send({
-    embeds: [embed],
-    components: [row]
+
+  await interaction.reply({
+    embeds: [embed]
   });
 
 });
 
 
-client.on("interactionCreate", async interaction => {
-
-  if (interaction.isChatInputCommand()) {
-
-    if (interaction.commandName === "balance") {
-
-      const amount = points[interaction.user.id] || 0;
-
-      return interaction.reply({
-        content: `💎 יש לך ${amount} נקודות`,
-        ephemeral: true
-      });
-
-    }
-
-
-    if (interaction.commandName === "addpoints") {
-
-      if (
-        !interaction.member.roles.cache
-        .some(role => role.name === STAFF_ROLE)
-      ) {
-        return interaction.reply({
-          content: "❌ אין לך הרשאה",
-          ephemeral: true
-        });
-      }
-
-
-      if (interaction.channel.name !== COMMAND_CHANNEL) {
-        return interaction.reply({
-          content:
-          `❌ הפקודה עובדת רק בחדר ${COMMAND_CHANNEL}`,
-          ephemeral: true
-        });
-      }
-
-
-      const user =
-        interaction.options.getUser("user");
-
-      const amount =
-        interaction.options.getInteger("amount");
-
-
-      points[user.id] =
-        (points[user.id] || 0) + amount;
-
-
-      save();
-
-
-      return interaction.reply(
-        `✅ נוספו ${amount} נקודות ל-${user}`
-      );
-    }
-
-  }
-  if (interaction.isButton()) {
-
-    if (interaction.customId !== "spin") return;
-
-
-    const user = interaction.user;
-
-    const currentPoints = points[user.id] || 0;
-
-
-    if (currentPoints < COST) {
-      return interaction.reply({
-        content: "❌ אין לך מספיק נקודות לסיבוב",
-        ephemeral: true
-      });
-    }
-
-
-    points[user.id] -= COST;
-
-
-    const prizes = [
-      { text: "💎 זכית ב־500 נקודות", add: 500 },
-      { text: "🔥 זכית ב־2000 נקודות", add: 2000 },
-      { text: "🎁 זכית בפרס מיוחד", add: 0 },
-      { text: "😭 לא זכית הפעם", add: 0 }
-    ];
-
-
-    const prize =
-      prizes[Math.floor(Math.random() * prizes.length)];
-
-
-    points[user.id] += prize.add;
-
-    save();
-
-
-    const embed = new EmbedBuilder()
-      .setTitle("🎡 תוצאת הגלגל")
-      .setDescription(
-        `${user} סובב את הגלגל וקיבל:\n\n${prize.text}`
-      );
-
-
-    return interaction.reply({
-      embeds: [embed]
-    });
-
-  }
-
-});\
-console.log("בדיקה חדשה 123");
 client.login(TOKEN);
