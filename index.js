@@ -1,3 +1,4 @@
+console.log("🔥 הגרסה החדשה של Lucky Wheel עובדת 🔥");
 console.log("קוד חדש עובד");
 const {
   Client,
