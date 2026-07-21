@@ -1,3 +1,4 @@
+throw new Error("THIS IS A NEW VERSION");
 const {
   Client,
   GatewayIntentBits,
